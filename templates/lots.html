@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Список лотов - Мониторинг аукционов{% endblock %}
+
+{% block content %}
+<h2>Список сохраненных лотов</h2>
+
+<div style="margin-bottom: 20px;">
+    <form method="get" action="/lots" style="display: inline-block; margin-right: 10px;">
+        <select name="region" style="padding: 8px; margin-right: 10px;">
+            <option value="">Все регионы</option>
+            {% for region in regions %}
+            <option value="{{ region }}" {% if request.args.get('region') == region %}selected{% endif %}>{{ region }}</option>
+            {% endfor %}
+        </select>
+        
+        <select name="status" style="padding: 8px; margin-right: 10px;">
+            <option value="">Все статусы</option>
+            {% for status in statuses %}
+            <option value="{{ status }}" {% if request.args.get('status') == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+        </select>
+        
+        <button type="submit">Фильтровать</button>
+    </form>
+    
+    <a href="/export?region={{ request.args.get('region', '') }}&status={{ request.args.get('status', '') }}">
+        <button class="btn-success">Экспорт в Excel</button>
+    </a>
+</div>
+
+{% if lots %}
+<table>
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Регион</th>
+            <th>Начальная цена</th>
+            <th>Текущая цена</th>
+            <th>Статус</th>
+            <th>Дата окончания</th>
+            <th>Ссылка</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for lot in lots %}
+        <tr>
+            <td>{{ lot.title or 'Без названия' }}</td>
+            <td>{{ lot.region or 'Не указан' }}</td>
+            <td>
+                {% if lot.initial_price %}
+                    {{ lot.initial_price|format_number }} {{ lot.currency or '₽' }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if lot.current_price %}
+                    {{ lot.current_price|format_number }} {{ lot.currency or '₽' }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                <span class="status-badge {% if 'закрыт' in (lot.status or '').lower() or 'отменен' in (lot.status or '').lower() %}status-closed{% else %}status-active{% endif %}">
+                    {{ lot.status or 'Не указан' }}
+                </span>
+            </td>
+            <td>{{ lot.application_deadline or 'Не указана' }}</td>
+            <td>
+                {% if lot.lot_url %}
+                    <a href="{{ lot.lot_url }}" target="_blank">Открыть</a>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p style="color: #666; margin-top: 20px;">Лоты не найдены. Выполните проверку на странице настроек фильтров.</p>
+{% endif %}
+{% endblock %}

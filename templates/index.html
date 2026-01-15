@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Настройка фильтров - Мониторинг аукционов{% endblock %}
+
+{% block content %}
+<h2>Настройка фильтров для мониторинга</h2>
+<p style="margin-bottom: 30px; color: #666;">Настройте параметры поиска аукционов. Фильтры будут сохранены и использоваться при автоматической проверке.</p>
+
+<form id="filtersForm">
+    <div class="form-group">
+        <label for="region">Регион:</label>
+        <select id="region" name="region">
+            <option value="">Все регионы</option>
+            {% for region in regions %}
+            <option value="{{ region }}" {% if saved_filters.get('region') == region %}selected{% endif %}>{{ region }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="status">Статус:</label>
+        <select id="status" name="status">
+            <option value="">Все статусы</option>
+            {% for status in statuses %}
+            <option value="{{ status }}" {% if saved_filters.get('status') == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="lot_type">Вид торгов:</label>
+        <select id="lot_type" name="lot_type">
+            <option value="">Все виды</option>
+            {% for lot_type in lot_types %}
+            <option value="{{ lot_type }}" {% if saved_filters.get('lot_type') == lot_type %}selected{% endif %}>{{ lot_type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="organizer">Организатор (часть названия):</label>
+        <input type="text" id="organizer" name="organizer" value="{{ saved_filters.get('organizer', '') }}" placeholder="Например: Федеральное казначейство">
+    </div>
+    
+    <div class="form-group">
+        <label for="min_price">Минимальная цена:</label>
+        <input type="text" id="min_price" name="min_price" value="{{ saved_filters.get('min_price', '') }}" placeholder="Например: 100000">
+    </div>
+    
+    <div class="form-group">
+        <label for="max_price">Максимальная цена:</label>
+        <input type="text" id="max_price" name="max_price" value="{{ saved_filters.get('max_price', '') }}" placeholder="Например: 10000000">
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <button type="submit">Сохранить фильтры</button>
+        <button type="button" class="btn-secondary" onclick="testFilters()" style="margin-left: 10px;">Тестовая проверка</button>
+    </div>
+</form>
+
+<div id="message" style="margin-top: 20px;"></div>
+
+<script>
+document.getElementById('filtersForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const filters = {};
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            filters[key] = value;
+        }
+    }
+    
+    try {
+        const response = await fetch('/api/filters', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(filters)
+        });
+        
+        const result = await response.json();
+        
+        const messageDiv = document.getElementById('message');
+        if (result.success) {
+            messageDiv.innerHTML = '<div class="alert alert-success">Фильтры успешно сохранены!</div>';
+        } else {
+            messageDiv.innerHTML = '<div class="alert alert-error">Ошибка при сохранении фильтров</div>';
+        }
+    } catch (error) {
+        document.getElementById('message').innerHTML = '<div class="alert alert-error">Ошибка: ' + error.message + '</div>';
+    }
+});
+
+async function testFilters() {
+    const messageDiv = document.getElementById('message');
+    messageDiv.innerHTML = '<div class="alert">Выполняется проверка...</div>';
+    
+    try {
+        const response = await fetch('/api/check', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            messageDiv.innerHTML = `
+                <div class="alert alert-success">
+                    Проверка завершена!<br>
+                    Найдено лотов: ${result.total_found}<br>
+                    Новых лотов: ${result.new_lots}<br>
+                    Обновлено лотов: ${result.updated_lots}
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = '<div class="alert alert-error">Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</div>';
+        }
+    } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Ошибка: ' + error.message + '</div>';
+    }
+}
+</script>
+{% endblock %}

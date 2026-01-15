@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Статус приложения - Мониторинг аукционов{% endblock %}
+
+{% block content %}
+<h2>Статус приложения</h2>
+
+<div style="margin-top: 30px;">
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3>Общая информация</h3>
+        <p><strong>Всего лотов в базе:</strong> {{ total_lots }}</p>
+        <p><strong>Интервал проверки:</strong> каждые {{ check_interval }} минут</p>
+        <p><strong>Статус:</strong> <span style="color: #28a745;">✓ Работает</span></p>
+    </div>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+        <h3>Текущие фильтры</h3>
+        {% if filters %}
+        <ul style="list-style: none; padding: 0;">
+            {% for key, value in filters.items() %}
+            <li style="padding: 5px 0;"><strong>{{ key }}:</strong> {{ value }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color: #666;">Фильтры не настроены. Перейдите на страницу <a href="/">настройки фильтров</a>.</p>
+        {% endif %}
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="location.reload()">Обновить статус</button>
+        <button class="btn-secondary" onclick="manualCheck()" style="margin-left: 10px;">Ручная проверка</button>
+    </div>
+    
+    <div id="checkResult" style="margin-top: 20px;"></div>
+</div>
+
+<script>
+async function manualCheck() {
+    const resultDiv = document.getElementById('checkResult');
+    resultDiv.innerHTML = '<div class="alert">Выполняется проверка...</div>';
+    
+    try {
+        const response = await fetch('/api/check', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Проверка завершена!</strong><br>
+                    Найдено лотов: ${result.total_found}<br>
+                    Новых лотов: ${result.new_lots}<br>
+                    Обновлено лотов: ${result.updated_lots}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-error">Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</div>';
+        }
+    } catch (error) {
+        resultDiv.innerHTML = '<div class="alert alert-error">Ошибка: ' + error.message + '</div>';
+    }
+}
+</script>
+{% endblock %}
